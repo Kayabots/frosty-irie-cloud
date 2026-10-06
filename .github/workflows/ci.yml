@@ -144,7 +144,7 @@ jobs:
           sudo mv conftest /usr/local/bin/
       - name: AWS credentials (plan role)
         if: matrix.cloud == 'aws'
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
           aws-region: us-east-1
