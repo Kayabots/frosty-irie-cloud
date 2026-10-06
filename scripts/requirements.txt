@@ -1,3 +1,3 @@
-boto3>=1.35
+boto3>=1.43.108
 azure-cosmos==4.9.0
 azure-identity==1.19.0
