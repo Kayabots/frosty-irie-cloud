@@ -1,0 +1,168 @@
+name: Deploy · AWS primary + Azure standby
+
+# Runs only after CI passed on main. The "prod" GitHub Environment requires a
+# reviewer's approval, which is the change-approval record (SOX ITGC / ISO A.8.32).
+on:
+  workflow_run:
+    workflows: ["CI · test, scan, plan, policy-check"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+env:
+  TF_VERSION: "1.10.5"
+  CONFTEST_VERSION: "0.56.0"
+  TF_IN_AUTOMATION: "true"
+  AWS_REGION: us-east-1
+
+jobs:
+  infra:
+    name: Infrastructure (policy-gated apply)
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment: prod
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ARM_USE_OIDC: "true"
+      ARM_CLIENT_ID: ${{ vars.AZURE_DEPLOY_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+    outputs:
+      aws_api_url: ${{ steps.apply.outputs.aws_api_url }}
+      aws_web_bucket: ${{ steps.apply.outputs.aws_web_bucket }}
+      aws_cf_id: ${{ steps.apply.outputs.aws_cf_id }}
+      aws_web_url: ${{ steps.apply.outputs.aws_web_url }}
+      az_api_url: ${{ steps.apply.outputs.az_api_url }}
+      az_func_name: ${{ steps.apply.outputs.az_func_name }}
+      az_web_account: ${{ steps.apply.outputs.az_web_account }}
+      az_web_url: ${{ steps.apply.outputs.az_web_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - name: Install Conftest
+        run: |
+          curl -sSL "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz" | tar xz conftest
+          sudo mv conftest /usr/local/bin/
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_DEPLOY_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Backend configs
+        run: |
+          printf 'bucket="%s"\nkey="workload/aws/prod.tfstate"\nregion="us-east-1"\nencrypt=true\nuse_lockfile=true\n' "${{ vars.TF_STATE_BUCKET }}" > "$RUNNER_TEMP/aws.hcl"
+          printf 'resource_group_name="rg-frostyirie-tfstate"\nstorage_account_name="%s"\ncontainer_name="tfstate"\nkey="workload/azure/prod.tfstate"\nuse_azuread_auth=true\nuse_oidc=true\n' "${{ vars.AZ_STATE_ACCOUNT }}" > "$RUNNER_TEMP/azure.hcl"
+      - name: Plan → policy gate → apply (both clouds)
+        id: apply
+        env:
+          OWNER_EMAIL: ${{ vars.OWNER_EMAIL }}
+          DEPLOYER_OBJECT_ID: ${{ vars.AZURE_DEPLOYER_OBJECT_ID }}
+          AWS_BACKEND_CONFIG: ${{ runner.temp }}/aws.hcl
+          AZURE_BACKEND_CONFIG: ${{ runner.temp }}/azure.hcl
+        run: scripts/deploy_infra.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: evidence-deploy-policy
+          path: evidence/
+          retention-days: 90
+
+  app:
+    name: Publish site + standby function
+    needs: infra
+    runs-on: ubuntu-latest
+    environment: prod
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Build bundles
+        run: |
+          python scripts/build.py web \
+            --api "${{ needs.infra.outputs.aws_api_url }}" \
+            --api "${{ needs.infra.outputs.az_api_url }}" \
+            --served-by "AWS us-east-1 (primary)"
+          python scripts/build.py azure
+          # The Azure copy of the site says where it is served from.
+          cp -r dist/web dist/web-azure
+          sed -i 's/AWS us-east-1 (primary)/Azure East US 2 (standby)/' dist/web-azure/config.js
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Upload site to S3 and invalidate CloudFront
+        run: |
+          aws s3 sync dist/web "s3://${{ needs.infra.outputs.aws_web_bucket }}" --delete \
+            --cache-control "public,max-age=300" --exclude "menu.json" --exclude "config.js"
+          aws s3 cp dist/web/menu.json "s3://${{ needs.infra.outputs.aws_web_bucket }}/menu.json" --cache-control "no-cache"
+          aws s3 cp dist/web/config.js "s3://${{ needs.infra.outputs.aws_web_bucket }}/config.js" --cache-control "no-cache"
+          aws cloudfront create-invalidation --distribution-id "${{ needs.infra.outputs.aws_cf_id }}" --paths "/*" >/dev/null
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_DEPLOY_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Upload site to Azure Storage ($web), Entra ID auth
+        run: |
+          az storage blob upload-batch --auth-mode login --overwrite \
+            --account-name "${{ needs.infra.outputs.az_web_account }}" -d '$web' -s dist/web-azure
+      - name: Deploy standby Function
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ needs.infra.outputs.az_func_name }}
+          package: dist/azure
+          scm-do-build-during-deployment: true
+          enable-oryx-build: true
+
+  smoke:
+    name: Smoke tests (both clouds)
+    needs: [infra, app]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Health, validation and site checks
+        run: |
+          set -e
+          mkdir -p evidence
+          check() { code=$(curl -s -o /dev/null -w '%{http_code}' "${@:2}"); echo "$1 -> $code"; echo "$1,$code" >> evidence/smoke.csv; }
+          for api in "${{ needs.infra.outputs.aws_api_url }}" "${{ needs.infra.outputs.az_api_url }}"; do
+            for i in 1 2 3 4 5 6; do curl -sf "$api/health" && break || sleep 20; done
+            check "health $api" "$api/health"
+            # An invalid order must be rejected (server-side validation is live):
+            check "reject-invalid $api" -X POST -H 'content-type: application/json' -d '{"items":[]}' "$api/orders"
+          done
+          check "site aws" "${{ needs.infra.outputs.aws_web_url }}"
+          check "site azure" "${{ needs.infra.outputs.az_web_url }}"
+          ! grep -E ',(5..|000)$' evidence/smoke.csv
+          grep -E 'reject-invalid.*,400$' evidence/smoke.csv | wc -l | grep -q 2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: evidence-smoke
+          path: evidence/
+          retention-days: 90

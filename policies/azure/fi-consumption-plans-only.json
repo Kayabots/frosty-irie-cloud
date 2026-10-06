@@ -1,0 +1,57 @@
+{
+  "name": "fi-consumption-plans-only",
+  "properties": {
+    "displayName": "Only consumption App Service plans (free-tier guardrail)",
+    "description": "Denies App Service plans other than Consumption (Y1) and Flex Consumption (FC1) so the standby stays within the free grant.",
+    "mode": "Indexed",
+    "metadata": {
+      "category": "Frosty Irie",
+      "version": "1.0.0",
+      "controls": [
+        "Internal cost guardrail",
+        "ISO A.5.23"
+      ]
+    },
+    "parameters": {
+      "allowedSkus": {
+        "type": "Array",
+        "defaultValue": [
+          "Y1",
+          "FC1"
+        ],
+        "metadata": {
+          "displayName": "Allowed plan SKUs"
+        }
+      },
+      "effect": {
+        "type": "String",
+        "defaultValue": "Deny",
+        "allowedValues": [
+          "Audit",
+          "Deny",
+          "Disabled"
+        ],
+        "metadata": {
+          "displayName": "Effect"
+        }
+      }
+    },
+    "policyRule": {
+      "if": {
+        "allOf": [
+          {
+            "field": "type",
+            "equals": "Microsoft.Web/serverfarms"
+          },
+          {
+            "field": "Microsoft.Web/serverfarms/sku.name",
+            "notIn": "[parameters('allowedSkus')]"
+          }
+        ]
+      },
+      "then": {
+        "effect": "[parameters('effect')]"
+      }
+    }
+  }
+}

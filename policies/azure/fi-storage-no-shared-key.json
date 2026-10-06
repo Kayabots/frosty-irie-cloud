@@ -1,0 +1,52 @@
+{
+  "name": "fi-storage-no-shared-key",
+  "properties": {
+    "displayName": "Storage accounts should disable shared key access",
+    "description": "Audits storage accounts that still accept account keys, unless tagged with an approved ComplianceException ID.",
+    "mode": "Indexed",
+    "metadata": {
+      "category": "Frosty Irie",
+      "version": "1.0.0",
+      "controls": [
+        "NIST PR.AA-01",
+        "ISO A.8.5",
+        "SOC2 CC6.1"
+      ]
+    },
+    "parameters": {
+      "effect": {
+        "type": "String",
+        "defaultValue": "Audit",
+        "allowedValues": [
+          "Audit",
+          "Deny",
+          "Disabled"
+        ],
+        "metadata": {
+          "displayName": "Effect"
+        }
+      }
+    },
+    "policyRule": {
+      "if": {
+        "allOf": [
+          {
+            "field": "type",
+            "equals": "Microsoft.Storage/storageAccounts"
+          },
+          {
+            "field": "Microsoft.Storage/storageAccounts/allowSharedKeyAccess",
+            "notEquals": "false"
+          },
+          {
+            "field": "tags['ComplianceException']",
+            "exists": "false"
+          }
+        ]
+      },
+      "then": {
+        "effect": "[parameters('effect')]"
+      }
+    }
+  }
+}

@@ -1,0 +1,67 @@
+name: DR · cross-cloud sync and restore drill
+
+# The schedule is switched off for now. This job runs in the "prod" environment,
+# so with required reviewers every scheduled run would wait for a manual approval.
+# Re-enable the two cron lines once a separate, least-privilege "ops" identity
+# exists for unattended runs. Until then, run it by hand (Run workflow).
+on:
+  # schedule:
+  #   - cron: "17 */6 * * *"   # every 6 h: replicate AWS orders to Azure (RPO <= 6 h)
+  #   - cron: "41 14 3 * *"    # 3rd of each month: AWS point-in-time restore drill
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "What to run"
+        type: choice
+        options: [aws-to-azure, azure-to-aws, restore-drill]
+        default: aws-to-azure
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dr
+  cancel-in-progress: false
+
+jobs:
+  dr:
+    runs-on: ubuntu-latest
+    environment: prod
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: us-east-1
+      ORDERS_TABLE: frostyirie-prod-orders
+      CONTACTS_TABLE: frostyirie-prod-order-contacts
+      COSMOS_ENDPOINT: ${{ vars.COSMOS_ENDPOINT }}
+      COSMOS_DATABASE: frostyirie
+      ACTION: ${{ inputs.action || (github.event.schedule == '41 14 3 * *' && 'restore-drill') || 'aws-to-azure' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r scripts/requirements.txt
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+      - uses: azure/login@v2
+        if: env.ACTION != 'restore-drill'
+        with:
+          client-id: ${{ vars.AZURE_DEPLOY_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Replicate
+        if: env.ACTION != 'restore-drill'
+        run: python scripts/dr_sync.py "$ACTION"
+      - name: Restore drill (AWS PITR)
+        if: env.ACTION == 'restore-drill'
+        run: python scripts/restore_drill_aws.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: evidence-dr-${{ env.ACTION }}-${{ github.run_id }}
+          path: evidence/
+          retention-days: 400

@@ -1,0 +1,23 @@
+{
+  "_comment": "AWS Config managed rules = runtime policy definitions for the AWS side. Consumed by infra/bootstrap/aws/config.tf. Each rule lists the controls it evidences (see compliance/control-matrix.md).",
+  "rules": [
+    { "name": "s3-bucket-public-read-prohibited", "identifier": "S3_BUCKET_PUBLIC_READ_PROHIBITED", "controls": ["NIST PR.AA-05", "ISO A.8.3", "SOC2 CC6.1"] },
+    { "name": "s3-bucket-public-write-prohibited", "identifier": "S3_BUCKET_PUBLIC_WRITE_PROHIBITED", "controls": ["NIST PR.AA-05", "ISO A.8.3", "SOC2 CC6.1"] },
+    { "name": "s3-bucket-sse-enabled", "identifier": "S3_BUCKET_SERVER_SIDE_ENCRYPTION_ENABLED", "controls": ["NIST PR.DS-01", "ISO A.8.24", "SOC2 CC6.7", "GDPR Art.32"] },
+    { "name": "s3-bucket-ssl-requests-only", "identifier": "S3_BUCKET_SSL_REQUESTS_ONLY", "controls": ["NIST PR.DS-02", "ISO A.8.24", "SOC2 CC6.7"] },
+    { "name": "s3-bucket-versioning-enabled", "identifier": "S3_BUCKET_VERSIONING_ENABLED", "controls": ["NIST PR.DS-11", "ISO A.8.13", "SOC2 A1.2"] },
+    { "name": "dynamodb-pitr-enabled", "identifier": "DYNAMODB_PITR_ENABLED", "controls": ["NIST PR.DS-11", "NIST RC.RP-03", "ISO A.8.13", "SOC2 A1.2", "SOX ITGC-Ops"] },
+    { "name": "dynamodb-in-backup-plan", "identifier": "DYNAMODB_IN_BACKUP_PLAN", "controls": ["NIST PR.DS-11", "ISO A.8.13", "SOC2 A1.2"] },
+    { "name": "cloudfront-viewer-policy-https", "identifier": "CLOUDFRONT_VIEWER_POLICY_HTTPS", "controls": ["NIST PR.DS-02", "ISO A.8.24", "SOC2 CC6.7", "GDPR Art.32"] },
+    { "name": "cloudfront-origin-failover-enabled", "identifier": "CLOUDFRONT_ORIGIN_FAILOVER_ENABLED", "controls": ["NIST RC.RP-01", "ISO A.8.14", "SOC2 A1.2"] },
+    { "name": "cloudfront-accesslogs-enabled", "identifier": "CLOUDFRONT_ACCESSLOGS_ENABLED", "controls": ["NIST DE.CM-01", "ISO A.8.15", "SOC2 CC7.2"] },
+    { "name": "lambda-function-public-access-prohibited", "identifier": "LAMBDA_FUNCTION_PUBLIC_ACCESS_PROHIBITED", "controls": ["NIST PR.AA-05", "SOC2 CC6.1"] },
+    { "name": "cloudtrail-enabled", "identifier": "CLOUD_TRAIL_ENABLED", "controls": ["NIST DE.CM-09", "ISO A.8.15", "SOC2 CC7.2", "SOX ITGC-Logging"] },
+    { "name": "cloudtrail-log-file-validation", "identifier": "CLOUD_TRAIL_LOG_FILE_VALIDATION_ENABLED", "controls": ["ISO A.8.15", "SOX ITGC-Logging"] },
+    { "name": "cw-loggroup-retention-period-check", "identifier": "CW_LOGGROUP_RETENTION_PERIOD_CHECK", "params": { "MinRetentionTime": "30" }, "controls": ["ISO A.8.15", "SOC2 CC7.2"] },
+    { "name": "iam-root-access-key-check", "identifier": "IAM_ROOT_ACCESS_KEY_CHECK", "controls": ["NIST PR.AA-01", "ISO A.8.2", "SOC2 CC6.1", "SOX ITGC-Access"] },
+    { "name": "root-account-mfa-enabled", "identifier": "ROOT_ACCOUNT_MFA_ENABLED", "controls": ["NIST PR.AA-03", "ISO A.8.5", "SOC2 CC6.1", "SOX ITGC-Access"] },
+    { "name": "iam-user-mfa-enabled", "identifier": "IAM_USER_MFA_ENABLED", "controls": ["NIST PR.AA-03", "ISO A.8.5", "SOC2 CC6.1"] },
+    { "name": "required-tags", "identifier": "REQUIRED_TAGS", "params": { "tag1Key": "Project", "tag2Key": "Environment", "tag3Key": "VantaOwner", "tag4Key": "DataClassification" }, "controls": ["NIST ID.AM-02", "ISO A.5.9"] }
+  ]
+}

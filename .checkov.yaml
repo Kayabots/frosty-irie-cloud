@@ -1,0 +1,50 @@
+# Checkov configuration. Every skip below is a risk-accepted exception with an
+# entry in compliance/exceptions.md (owner, reason, compensating control, review date).
+# Do not add a skip without adding the matching exception.
+framework:
+  - terraform
+  - github_actions
+  - secrets
+quiet: true
+compact: true
+download-external-modules: false
+skip-check:
+  # EXC-002 Free-tier: customer-managed KMS keys cost ~$1/key/month. AWS/Microsoft managed keys used.
+  - CKV_AWS_145   # S3 encrypted with KMS CMK
+  - CKV_AWS_119   # DynamoDB encrypted with KMS CMK
+  - CKV_AWS_158   # CloudWatch log group encrypted with KMS
+  - CKV_AWS_173   # Lambda env vars encrypted with CMK
+  - CKV2_AZURE_1  # Storage encrypted with CMK
+  - CKV_AZURE_100 # Cosmos DB encrypted with CMK
+  # EXC-003 DR is cross-cloud (Azure standby), not cross-region within one cloud.
+  - CKV_AWS_144   # S3 cross-region replication
+  - CKV_AZURE_206 # Storage GRS replication
+  # EXC-004 Public ordering site/API by design; protected by validation, throttling, CORS, CSP.
+  - CKV_AWS_309   # API Gateway route without authorizer
+  - CKV_AZURE_56  # Function App authentication
+  - CKV_AZURE_59  # Storage public network access (static website)
+  - CKV_AZURE_101 # Cosmos DB public network access (Consumption plan has no VNet)
+  - CKV_AZURE_99  # Cosmos DB IP firewall
+  - CKV2_AZURE_33 # Storage private endpoint
+  # EXC-005 WAF is not free tier; API throttling + CloudFront Shield Standard compensate.
+  - CKV_AWS_68    # CloudFront WAF
+  - CKV2_AWS_47   # CloudFront WAF Log4j rule
+  # EXC-006 Default *.cloudfront.net certificate until frostyirie.cr is delegated.
+  - CKV2_AWS_42   # CloudFront custom certificate
+  - CKV_AWS_174   # CloudFront TLS 1.2 minimum (not settable with default cert)
+  # EXC-007 Serverless without VPC (no NAT gateway cost); IAM least privilege compensates.
+  - CKV_AWS_117   # Lambda inside VPC
+  - CKV_AWS_116   # Lambda DLQ (synchronous API invocation, errors return to caller)
+  - CKV_AWS_115   # Lambda reserved concurrency (new accounts cannot reserve)
+  - CKV_AWS_272   # Lambda code signing
+  - CKV_AZURE_212 # Function App redundancy (Consumption plan)
+  - CKV_AZURE_225 # App Service plan zone redundancy (Consumption plan)
+  - CKV_AZURE_211 # App Service plan suitable for production
+  # EXC-008 Log retention 30 days on hot tier (free tier); CloudTrail kept 1 year in S3.
+  - CKV_AWS_338   # CloudWatch log retention >= 1 year
+  - CKV_AWS_374   # CloudFront geo restriction (customers are international tourists)
+  - CKV2_AWS_62   # S3 event notifications
+  # The DR workflow takes one choice input (3 fixed values) to pick the direction; it does not alter build output.
+  - CKV_GHA_7
+  - CKV_AZURE_33  # Queue service logging (no queues are used)
+  - CKV_AZURE_221 # Function App public network access (EXC-004, public ordering API)

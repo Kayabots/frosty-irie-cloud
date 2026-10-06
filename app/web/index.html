@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frosty Irie · Order Online · Puerto Viejo</title>
+<meta name="description" content="Order pizza, tropical cocktails, cold beer and Caribbean eats from Frosty Irie in Puerto Viejo. Home delivery, pickup or straight to your beach table.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.execute-api.us-east-1.amazonaws.com https://*.azurewebsites.net; frame-ancestors 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="theme-color" content="#2A1A0E">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Nunito:wght@400;600;700;800&family=Caveat:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="config.js" defer></script>
+<script src="app.js" defer></script>
+</head>
+<body>
+
+<a class="skip" href="#menu">Skip to menu</a>
+
+<div class="topline">
+  <span>🌴 Open daily <strong id="hoursLabel">11:00–22:00</strong> · Puerto Viejo beachfront</span>
+  <span class="hh" id="hhBanner" hidden>🍹 Happy hour now: cocktails ₡5,000</span>
+</div>
+
+<header class="nav">
+  <a href="#top" class="brand" aria-label="Frosty Irie home"><img src="assets/logo-wordmark.png" alt="Frosty Irie — Cool Drinks &amp; Irie People" width="160" height="69"></a>
+  <nav class="nav-links" aria-label="Sections">
+    <a href="#menu">Menu</a>
+    <a href="#how">How it works</a>
+    <a href="#visit">Visit</a>
+  </nav>
+  <button class="cart-btn" id="cartBtn" aria-controls="cart" aria-expanded="false">
+    <span aria-hidden="true">🛒</span> Order <span class="badge" id="cartCount" hidden>0</span>
+  </button>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="hero-inner">
+      <p class="eyebrow">Puerto Viejo · Caribbean coast</p>
+      <h1>Stone-baked pizza.<br><span class="accent">Frosty drinks.</span><br>Irie people.</h1>
+      <p class="lead">Order from the same menu we serve at the bar and choose how it reaches you: at home, at our counter, or right at your spot on the sand.</p>
+      <div class="hero-ctas">
+        <a class="btn btn-fire" href="#menu">See the menu</a>
+        <a class="btn btn-ghost" id="heroWa" href="#" rel="noopener" target="_blank">WhatsApp us</a>
+      </div>
+      <ul class="modes" aria-label="Ways to get your order">
+        <li><span>🛵</span><div><strong>Home delivery</strong><small>Puerto Viejo area · ₡1,500</small></div></li>
+        <li><span>🏪</span><div><strong>Pickup</strong><small>Ready in 15–20 min</small></div></li>
+        <li><span>🏖️</span><div><strong>Beach table</strong><small>We bring it to your spot</small></div></li>
+      </ul>
+    </div>
+    <svg class="wave" viewBox="0 0 1440 80" preserveAspectRatio="none" aria-hidden="true"><path d="M0,40 C240,80 480,0 720,40 C960,80 1200,0 1440,40 L1440,80 L0,80 Z"/></svg>
+  </section>
+
+  <section id="menu" class="menu">
+    <div class="wrap">
+      <header class="section-head">
+        <p class="eyebrow">Our menu</p>
+        <h2>Pick your <span class="fire">favorites</span></h2>
+        <p id="menuStatus" class="muted">Loading the menu…</p>
+      </header>
+      <div class="tabs" role="tablist" id="tabs"></div>
+      <p class="cat-blurb" id="catBlurb"></p>
+      <div class="grid" id="grid" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section id="how" class="how">
+    <div class="wrap how-grid">
+      <div><span class="step">1</span><h3>Build your order</h3><p>Pick sizes and quantities. Prices come straight from our in-house menu.</p></div>
+      <div><span class="step">2</span><h3>Tell us where</h3><p>Your address, a pickup, or your beach spot (“blue umbrella by the lifeguard” works).</p></div>
+      <div><span class="step">3</span><h3>Confirm on WhatsApp</h3><p>You get an order number, and one tap sends it to our kitchen on WhatsApp.</p></div>
+    </div>
+  </section>
+
+  <section id="visit" class="visit">
+    <div class="wrap visit-grid">
+      <div>
+        <p class="eyebrow">Find us</p>
+        <h2>Sand between your toes, <span class="ocean">pizza in hand</span></h2>
+        <p>Frosty Irie sits right on the beach in Puerto Viejo de Talamanca, where the jungle meets the Caribbean Sea.</p>
+      </div>
+      <dl class="facts">
+        <div><dt>WhatsApp / phone</dt><dd><a id="waLink" href="#" target="_blank" rel="noopener">+506 8918-5528</a></dd></div>
+        <div><dt>Email</dt><dd><a href="mailto:hola@frostyirie.cr">hola@frostyirie.cr</a></dd></div>
+        <div><dt>Hours</dt><dd>Daily 11:00–22:00 · Happy hour 16:00–18:00</dd></div>
+        <div><dt>Where</dt><dd>Beachfront, Puerto Viejo, Limón, Costa Rica</dd></div>
+      </dl>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <img src="assets/logo-wordmark-light.png" alt="" width="140" height="61">
+  <p>© <span id="year">2026</span> Frosty Irie · Puerto Viejo, Costa Rica · <a href="privacy.html">Privacy notice</a></p>
+  <p class="tiny" id="servedBy">Served from the cloud</p>
+</footer>
+
+<!-- Cart + checkout drawer -->
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="cart" aria-label="Your order" aria-hidden="true">
+  <div class="drawer-head">
+    <h2>Your order</h2>
+    <button class="icon-btn" id="closeCart" aria-label="Close order">✕</button>
+  </div>
+
+  <div class="drawer-body">
+    <div id="cartEmpty" class="empty"><span>🍕</span><p>Your order is empty.<br>Add something from the menu.</p></div>
+    <ul id="cartLines" class="lines"></ul>
+
+    <form id="checkout" class="checkout" novalidate hidden>
+      <fieldset class="seg" id="orderTypes">
+        <legend>How do you want it?</legend>
+      </fieldset>
+
+      <label class="field" data-for="delivery">Delivery address
+        <textarea name="address" rows="2" maxlength="300" placeholder="Street, landmark, house color"></textarea>
+      </label>
+      <label class="field" data-for="beach">Beach table or spot
+        <input name="table" maxlength="60" placeholder="Table 7, or blue umbrella by the lifeguard">
+      </label>
+      <label class="field">Your name
+        <input name="name" maxlength="60" autocomplete="given-name" required>
+      </label>
+      <label class="field">WhatsApp / phone
+        <input name="phone" maxlength="20" inputmode="tel" autocomplete="tel" placeholder="+506 8888-8888" required>
+      </label>
+      <label class="field">Notes for the kitchen <small>(optional)</small>
+        <input name="notes" maxlength="300" placeholder="No onions, extra lime…">
+      </label>
+      <label class="hp" aria-hidden="true">Website <input name="website" tabindex="-1" autocomplete="off"></label>
+      <label class="consent">
+        <input type="checkbox" name="consent" required>
+        <span>I agree that Frosty Irie uses my name, phone and address only to prepare and deliver this order, and deletes them after 30 days. <a href="privacy.html" target="_blank">Privacy notice</a></span>
+      </label>
+
+      <dl class="totals" id="totals"></dl>
+      <p class="form-error" id="formError" role="alert"></p>
+      <button class="btn btn-fire block" id="placeOrder" type="submit">Place order</button>
+      <p class="tiny center">Final prices are confirmed by our system when you place the order.</p>
+    </form>
+  </div>
+</aside>
+
+<!-- Confirmation -->
+<div class="modal" id="confirm" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" hidden>
+  <div class="modal-box">
+    <div class="modal-icon" id="confirmIcon">✅</div>
+    <h2 id="confirmTitle">Order received!</h2>
+    <p class="order-id" id="confirmId"></p>
+    <p id="confirmMsg" class="muted"></p>
+    <a class="btn btn-wa block" id="confirmWa" href="#" target="_blank" rel="noopener">Send to our kitchen on WhatsApp</a>
+    <button class="btn btn-sand block" id="confirmClose">Done</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

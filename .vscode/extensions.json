@@ -1,0 +1,16 @@
+{
+  "recommendations": [
+    "hashicorp.terraform",
+    "ms-python.python",
+    "charliermarsh.ruff",
+    "ms-azuretools.vscode-azurefunctions",
+    "ms-azuretools.vscode-azureresourcegroups",
+    "amazonwebservices.aws-toolkit-vscode",
+    "tsandall.opa",
+    "github.vscode-github-actions",
+    "bierner.markdown-mermaid",
+    "bridgecrew.checkov",
+    "ritwickdey.liveserver",
+    "redhat.vscode-yaml"
+  ]
+}

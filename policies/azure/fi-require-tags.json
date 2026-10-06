@@ -1,0 +1,56 @@
+{
+  "name": "fi-require-tags",
+  "properties": {
+    "displayName": "Require Frosty Irie governance tags",
+    "description": "Resources must carry Project, Environment, VantaOwner and DataClassification tags so Vanta can assign owners and flag customer data.",
+    "mode": "Indexed",
+    "metadata": {
+      "category": "Frosty Irie",
+      "version": "1.0.0",
+      "controls": [
+        "NIST ID.AM-02",
+        "ISO A.5.9",
+        "SOC2 CC2.1"
+      ]
+    },
+    "parameters": {
+      "effect": {
+        "type": "String",
+        "defaultValue": "Audit",
+        "allowedValues": [
+          "Audit",
+          "Deny",
+          "Disabled"
+        ],
+        "metadata": {
+          "displayName": "Effect"
+        }
+      }
+    },
+    "policyRule": {
+      "if": {
+        "anyOf": [
+          {
+            "field": "tags['Project']",
+            "exists": "false"
+          },
+          {
+            "field": "tags['Environment']",
+            "exists": "false"
+          },
+          {
+            "field": "tags['VantaOwner']",
+            "exists": "false"
+          },
+          {
+            "field": "tags['DataClassification']",
+            "exists": "false"
+          }
+        ]
+      },
+      "then": {
+        "effect": "[parameters('effect')]"
+      }
+    }
+  }
+}

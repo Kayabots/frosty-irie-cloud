@@ -1,0 +1,7 @@
+pytest==8.3.4
+moto[dynamodb]==5.0.22
+boto3>=1.35
+ruff==0.8.4
+checkov==3.2.340
+pre-commit==4.0.1
+pyyaml==6.0.2

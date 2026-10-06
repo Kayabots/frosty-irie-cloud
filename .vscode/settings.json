@@ -1,0 +1,13 @@
+{
+  "editor.formatOnSave": true,
+  "[terraform]": { "editor.defaultFormatter": "hashicorp.terraform" },
+  "[python]": { "editor.defaultFormatter": "charliermarsh.ruff" },
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["tests"],
+  "opa.roots": ["${workspaceFolder}/policies/opa"],
+  "yaml.schemas": {
+    "https://json.schemastore.org/github-workflow.json": ".github/workflows/*.yml"
+  },
+  "liveServer.settings.root": "/dist/web",
+  "files.exclude": { "**/.terraform": true, "**/__pycache__": true }
+}

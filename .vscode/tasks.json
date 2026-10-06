@@ -1,0 +1,64 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build site (local, no APIs)",
+      "type": "shell",
+      "command": "python scripts/build.py web --served-by local",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Serve site on http://localhost:8080",
+      "type": "shell",
+      "command": "python -m http.server 8080 --directory dist/web",
+      "dependsOn": "Build site (local, no APIs)",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Unit tests",
+      "type": "shell",
+      "command": "pytest -q",
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Policy tests (OPA)",
+      "type": "shell",
+      "command": "opa test policies/opa -v",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Terraform fmt + validate (all stacks)",
+      "type": "shell",
+      "command": "terraform fmt -recursive infra && for d in infra/aws infra/azure infra/bootstrap/aws infra/bootstrap/azure; do terraform -chdir=$d init -backend=false -input=false >/dev/null && terraform -chdir=$d validate; done",
+      "problemMatcher": []
+    },
+    {
+      "label": "Checkov scan",
+      "type": "shell",
+      "command": "checkov -d infra --config-file .checkov.yaml",
+      "problemMatcher": []
+    },
+    {
+      "label": "Plan + policy check: AWS",
+      "type": "shell",
+      "command": "scripts/plan_and_check.sh aws infra/aws/backend.hcl -var-file=terraform.tfvars",
+      "problemMatcher": []
+    },
+    {
+      "label": "Plan + policy check: Azure",
+      "type": "shell",
+      "command": "scripts/plan_and_check.sh azure infra/azure/backend.hcl -var-file=terraform.tfvars",
+      "problemMatcher": []
+    },
+    {
+      "label": "Deploy infra (both clouds)",
+      "type": "shell",
+      "command": "AWS_BACKEND_CONFIG=$PWD/infra/aws/backend.hcl AZURE_BACKEND_CONFIG=$PWD/infra/azure/backend.hcl scripts/deploy_infra.sh",
+      "problemMatcher": []
+    }
+  ]
+}

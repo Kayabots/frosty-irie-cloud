@@ -1,0 +1,6 @@
+# Keep Linux line endings in the repository so scripts run in GitHub Actions
+# no matter which operating system commits them.
+* text=auto eol=lf
+*.png  binary
+*.jpeg binary
+*.jpg  binary

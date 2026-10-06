@@ -1,0 +1,22 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels: [dependencies, security]
+  - package-ecosystem: pip
+    directory: /app/api/azure
+    schedule:
+      interval: weekly
+    labels: [dependencies, security]
+  - package-ecosystem: pip
+    directory: /scripts
+    schedule:
+      interval: weekly
+    labels: [dependencies, security]
+  - package-ecosystem: terraform
+    directories: [/infra/aws, /infra/azure, /infra/bootstrap/aws, /infra/bootstrap/azure]
+    schedule:
+      interval: weekly
+    labels: [dependencies, iac]

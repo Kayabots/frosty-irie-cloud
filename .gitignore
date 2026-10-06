@@ -1,0 +1,34 @@
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+crash.log
+**/.build/
+backend.hcl
+*.auto.tfvars
+terraform.tfvars
+!*.tfvars.example
+.terraform.lock.hcl.bak
+
+# Build and evidence output
+dist/
+evidence/
+app/api/common/menu.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Azure Functions local
+local.settings.json
+.python_packages/
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+.idea/

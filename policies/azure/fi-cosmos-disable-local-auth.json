@@ -1,0 +1,49 @@
+{
+  "name": "fi-cosmos-disable-local-auth",
+  "properties": {
+    "displayName": "Cosmos DB must disable key-based authentication",
+    "description": "Forces Entra ID (managed identity) access to Cosmos DB data so every read and write is attributable.",
+    "mode": "Indexed",
+    "metadata": {
+      "category": "Frosty Irie",
+      "version": "1.0.0",
+      "controls": [
+        "NIST PR.AA-01",
+        "ISO A.8.5",
+        "SOC2 CC6.1",
+        "SOX ITGC-Access"
+      ]
+    },
+    "parameters": {
+      "effect": {
+        "type": "String",
+        "defaultValue": "Deny",
+        "allowedValues": [
+          "Audit",
+          "Deny",
+          "Disabled"
+        ],
+        "metadata": {
+          "displayName": "Effect"
+        }
+      }
+    },
+    "policyRule": {
+      "if": {
+        "allOf": [
+          {
+            "field": "type",
+            "equals": "Microsoft.DocumentDB/databaseAccounts"
+          },
+          {
+            "field": "Microsoft.DocumentDB/databaseAccounts/disableLocalAuth",
+            "notEquals": "true"
+          }
+        ]
+      },
+      "then": {
+        "effect": "[parameters('effect')]"
+      }
+    }
+  }
+}

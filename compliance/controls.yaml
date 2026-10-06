@@ -1,0 +1,210 @@
+# Frosty Irie control set: single source of truth for compliance-as-code.
+# - scripts/gen_control_matrix.py renders compliance/control-matrix.md from this file
+#   (CI fails if the rendered matrix is stale).
+# - Import the controls into Vanta as custom controls and link the evidence listed
+#   under `evidence`; the `vanta.monitors` lines are what the Vanta AWS / Azure /
+#   GitHub integrations observe on their own once connected.
+# Framework references: NIST CSF 2.0 subcategories, ISO/IEC 27001:2022 Annex A,
+# SOC 2 Trust Services Criteria (2017, rev. 2022), SOX IT general controls, GDPR articles.
+version: 1
+owner: Kaya (Randy Cayasso), Cybersecurity Automation & Continuous Compliance
+controls:
+  - id: FI-01
+    name: Asset inventory and ownership
+    description: Every cloud resource carries Project, Environment, VantaOwner and DataClassification tags; resources holding personal data are flagged.
+    frameworks: {nist_csf: [ID.AM-02, ID.AM-07], iso27001: [A.5.9, A.5.12], soc2: [CC2.1], sox_itgc: [], gdpr: [Art.30]}
+    implementation: [infra/aws/main.tf, infra/azure/main.tf]
+    automated_checks: [OPA TAG-001, Azure Policy fi-require-tags, AWS Config required-tags]
+    evidence: [evidence-plan-* artifact (policy-*.json), Azure Policy compliance export]
+    vanta: {monitors: "Resource inventory owners and user-data flags from Vanta* tags"}
+    frequency: every change + continuous
+
+  - id: FI-02
+    name: Encryption at rest
+    description: S3 SSE, DynamoDB SSE, Azure Storage infrastructure encryption, Cosmos DB service-managed encryption.
+    frameworks: {nist_csf: [PR.DS-01], iso27001: [A.8.24], soc2: [CC6.1, CC6.7], sox_itgc: [], gdpr: [Art.32]}
+    implementation: [infra/aws/web.tf, infra/aws/data.tf, infra/azure/main.tf]
+    automated_checks: [OPA S3-002, OPA DDB-002, AWS Config s3-bucket-sse-enabled, Checkov]
+    evidence: [Checkov SARIF in code scanning, AWS Config rule history]
+    vanta: {monitors: "Storage and database encryption tests (AWS + Azure)"}
+    frequency: every change + continuous
+
+  - id: FI-03
+    name: Encryption in transit
+    description: HTTPS-only CloudFront and Functions, TLS 1.2 minimum on storage and Cosmos, HSTS, deny non-TLS S3 requests.
+    frameworks: {nist_csf: [PR.DS-02], iso27001: [A.8.24, A.8.20], soc2: [CC6.7], sox_itgc: [], gdpr: [Art.32]}
+    implementation: [infra/aws/web.tf, infra/azure/main.tf]
+    automated_checks: [OPA CDN-001, OPA STO-001, OPA STO-002, OPA COS-003, OPA FN-001, Azure Policy fi-storage-secure-transport, Azure Policy fi-webapp-https-only]
+    evidence: [policy-*.json, smoke test results]
+    vanta: {monitors: "TLS and HTTPS enforcement tests"}
+    frequency: every change + continuous
+
+  - id: FI-04
+    name: No public data stores
+    description: S3 public access blocks on every bucket, private origin via CloudFront OAC, no public blob containers, no public Lambda URLs.
+    frameworks: {nist_csf: [PR.AA-05], iso27001: [A.8.3], soc2: [CC6.1, CC6.6], sox_itgc: [ITGC-Access], gdpr: [Art.32]}
+    implementation: [infra/aws/web.tf, infra/azure/main.tf]
+    automated_checks: [OPA S3-001, OPA STO-003, OPA LAM-001, AWS Config s3-bucket-public-read-prohibited, Azure Policy fi-storage-no-public-blob]
+    evidence: [policy-*.json, AWS Config rule history]
+    vanta: {monitors: "Public bucket / container tests"}
+    frequency: every change + continuous
+
+  - id: FI-05
+    name: Keyless identity for pipelines and workloads
+    description: GitHub OIDC federation to AWS and Entra ID; Cosmos DB key auth disabled; Function uses managed identity; no cloud secrets stored in GitHub.
+    frameworks: {nist_csf: [PR.AA-01, PR.AA-03], iso27001: [A.5.17, A.8.5], soc2: [CC6.1, CC6.2], sox_itgc: [ITGC-Access], gdpr: [Art.32]}
+    implementation: [infra/bootstrap/aws/github_oidc.tf, infra/bootstrap/azure/github_oidc.tf, infra/azure/main.tf]
+    automated_checks: [OPA COS-001, OPA STO-004, Azure Policy fi-cosmos-disable-local-auth, gitleaks]
+    evidence: [IAM trust policies, Entra federated credentials, gitleaks job logs]
+    vanta: {monitors: "Access keys / service principal secret age tests (should find none)"}
+    frequency: continuous
+
+  - id: FI-06
+    name: Least privilege
+    description: Separate plan (read-only) and deploy roles; deploy can manage only frostyirie-* roles and cannot touch CI or Vanta roles; RBAC admin constrained by ABAC condition; Lambda can only PutItem.
+    frameworks: {nist_csf: [PR.AA-05], iso27001: [A.5.15, A.5.18, A.8.2], soc2: [CC6.3], sox_itgc: [ITGC-Access], gdpr: [Art.25, Art.32]}
+    implementation: [infra/bootstrap/aws/github_oidc.tf, infra/bootstrap/azure/github_oidc.tf, infra/aws/api.tf]
+    automated_checks: [OPA IAM-001, Checkov IAM checks]
+    evidence: [IAM Access Analyzer findings, role policies]
+    vanta: {monitors: "IAM users/roles with admin access, quarterly access review task"}
+    frequency: every change + quarterly access review
+
+  - id: FI-07
+    name: Change management and segregation of duties
+    description: Protected main branch, CODEOWNERS review, PR checklist, CI must pass, prod deploy requires a GitHub Environment approval by someone other than the author.
+    frameworks: {nist_csf: [PR.PS-01, ID.IM-03], iso27001: [A.8.32, A.5.3], soc2: [CC8.1], sox_itgc: [ITGC-Change], gdpr: []}
+    implementation: [.github/CODEOWNERS, .github/pull_request_template.md, .github/workflows/deploy.yml]
+    automated_checks: [Branch protection, required status checks, environment reviewers]
+    evidence: [PR history with approvals, deployment approval log in GitHub Environments]
+    vanta: {monitors: "GitHub integration: branch protection, PR review before merge"}
+    frequency: every change
+
+  - id: FI-08
+    name: Policy-as-code deployment gate
+    description: Every plan is evaluated by Conftest (OPA) before apply; the exact plan that passed is the one applied.
+    frameworks: {nist_csf: [PR.PS-01, GV.PO-01], iso27001: [A.8.9, A.8.27], soc2: [CC7.1, CC8.1], sox_itgc: [ITGC-Change], gdpr: [Art.25]}
+    implementation: [policies/opa, scripts/plan_and_check.sh, scripts/deploy_infra.sh]
+    automated_checks: [opa test (policy unit tests), Conftest in CI and deploy]
+    evidence: [evidence-plan-*, evidence-deploy-policy artifacts]
+    vanta: {monitors: "Upload evidence-deploy-policy as document evidence for the linked custom test"}
+    frequency: every change
+
+  - id: FI-09
+    name: Configuration drift detection
+    description: Nightly terraform plan per cloud; drift opens a labelled GitHub issue for triage.
+    frameworks: {nist_csf: [DE.CM-09, PR.PS-01], iso27001: [A.8.9], soc2: [CC7.1], sox_itgc: [ITGC-Change], gdpr: []}
+    implementation: [.github/workflows/drift.yml]
+    automated_checks: [drift workflow]
+    evidence: [drift issues and their resolution PRs]
+    vanta: {monitors: "GitHub issues labelled drift can be linked as evidence"}
+    frequency: daily
+
+  - id: FI-10
+    name: Vulnerability and secret management
+    description: Dependabot for Actions, pip and Terraform providers; gitleaks on every push; Checkov SARIF in code scanning.
+    frameworks: {nist_csf: [ID.RA-01, PR.PS-02], iso27001: [A.8.8, A.8.28], soc2: [CC7.1], sox_itgc: [], gdpr: [Art.32]}
+    implementation: [.github/dependabot.yml, .github/workflows/ci.yml, .checkov.yaml]
+    automated_checks: [Dependabot, gitleaks, Checkov]
+    evidence: [code scanning alerts, Dependabot PRs]
+    vanta: {monitors: "GitHub Dependabot / code scanning vulnerability SLAs"}
+    frequency: continuous
+
+  - id: FI-11
+    name: Audit logging
+    description: Multi-region CloudTrail with log file validation (1 year), API Gateway access logs, Lambda logs without personal data, Azure diagnostics to Log Analytics.
+    frameworks: {nist_csf: [DE.CM-01, DE.CM-09, PR.PS-04], iso27001: [A.8.15, A.8.16], soc2: [CC7.2], sox_itgc: [ITGC-Logging], gdpr: [Art.30]}
+    implementation: [infra/bootstrap/aws/state_and_audit.tf, infra/aws/api.tf, infra/azure/ops.tf]
+    automated_checks: [OPA LOG-001, AWS Config cloudtrail-enabled, AWS Config cloudtrail-log-file-validation]
+    evidence: [CloudTrail digest files, Log Analytics workspace]
+    vanta: {monitors: "CloudTrail enabled, log retention tests"}
+    frequency: continuous
+
+  - id: FI-12
+    name: Monitoring and alerting
+    description: CloudWatch alarms on Lambda errors and API 5xx; Azure metric alert on Function 5xx; budget alerts in both clouds.
+    frameworks: {nist_csf: [DE.CM-01, DE.AE-02, RS.MA-01], iso27001: [A.8.16], soc2: [CC7.2, CC7.3], sox_itgc: [ITGC-Ops], gdpr: [Art.33]}
+    implementation: [infra/aws/ops.tf, infra/azure/ops.tf]
+    automated_checks: [Terraform apply]
+    evidence: [alarm history, action group notifications]
+    vanta: {monitors: "Monitoring / alerting configured tests"}
+    frequency: continuous
+
+  - id: FI-13
+    name: Backups
+    description: DynamoDB PITR (35 days) + AWS Backup daily (35 days); Cosmos DB continuous backup (7 days); S3 and Azure blob versioning and soft delete.
+    frameworks: {nist_csf: [PR.DS-11], iso27001: [A.8.13], soc2: [A1.2], sox_itgc: [ITGC-Ops], gdpr: [Art.32]}
+    implementation: [infra/aws/data.tf, infra/aws/ops.tf, infra/azure/main.tf]
+    automated_checks: [OPA DDB-001, OPA COS-002, AWS Config dynamodb-pitr-enabled, AWS Config dynamodb-in-backup-plan]
+    evidence: [AWS Backup job history, Cosmos restorable timestamps]
+    vanta: {monitors: "Database backups enabled tests"}
+    frequency: daily
+
+  - id: FI-14
+    name: Cross-cloud disaster recovery
+    description: Azure warm standby with its own copy of site and API; browser fails over API calls; CloudFront fails over site origin; orders replicated every 6 h (RPO 6 h, RTO 1 h target).
+    frameworks: {nist_csf: [RC.RP-01, PR.IR-03], iso27001: [A.5.29, A.5.30, A.8.14], soc2: [A1.2, CC9.1], sox_itgc: [ITGC-Ops], gdpr: [Art.32]}
+    implementation: [app/web/app.js, infra/aws/web.tf, scripts/dr_sync.py, .github/workflows/dr.yml]
+    automated_checks: [dr workflow, smoke tests on both clouds]
+    evidence: [evidence-dr-aws-to-azure-* artifacts, docs/runbooks/disaster-recovery.md]
+    vanta: {monitors: "Upload quarterly DR test record; BCP/DR policy acceptance"}
+    frequency: every 6 hours
+
+  - id: FI-15
+    name: Restore testing
+    description: Monthly automated point-in-time restore of the orders table with measured RTO; quarterly manual Cosmos restore per runbook.
+    frameworks: {nist_csf: [RC.RP-03, ID.IM-02], iso27001: [A.8.13, A.5.30], soc2: [A1.3], sox_itgc: [ITGC-Ops], gdpr: [Art.32]}
+    implementation: [scripts/restore_drill_aws.py, docs/runbooks/disaster-recovery.md]
+    automated_checks: [dr workflow restore-drill]
+    evidence: [evidence-dr-restore-drill-* artifacts (400-day retention)]
+    vanta: {monitors: "Backup restoration test evidence"}
+    frequency: monthly
+
+  - id: FI-16
+    name: Data minimisation and retention
+    description: Personal data is stored separately from the order ledger and deleted after 30 days (DynamoDB TTL, Cosmos TTL); the ledger keeps only a one-way customer key; logs never contain personal data.
+    frameworks: {nist_csf: [PR.DS-01, GV.PO-01], iso27001: [A.5.33, A.5.34, A.8.10], soc2: [P4.2, C1.2], sox_itgc: [], gdpr: [Art.5(1)(c), Art.5(1)(e), Art.25]}
+    implementation: [app/api/common/pricing.py, infra/aws/data.tf, infra/azure/main.tf]
+    automated_checks: [OPA GDPR-001 (both clouds), unit test test_personal_data_kept_out_of_financial_record]
+    evidence: [unit-tests.xml, policy-*.json]
+    vanta: {monitors: "Data retention policy acceptance; user-data tagged stores"}
+    frequency: every change + continuous
+
+  - id: FI-17
+    name: Transparency and lawful basis
+    description: Privacy notice linked at checkout; orders are refused without explicit acknowledgement; consent timestamp stored with the contact record.
+    frameworks: {nist_csf: [GV.OC-03], iso27001: [A.5.34], soc2: [P1.1, P2.1], sox_itgc: [], gdpr: [Art.6, Art.7, Art.13]}
+    implementation: [app/web/privacy.html, app/web/index.html, app/api/common/pricing.py]
+    automated_checks: [unit test test_rejects_bad_orders (consent)]
+    evidence: [unit-tests.xml, privacy notice version history]
+    vanta: {monitors: "Privacy policy document"}
+    frequency: every change
+
+  - id: FI-18
+    name: Order processing integrity
+    description: Prices, happy-hour discounts, service charge, 13% IVA and delivery fee are computed server-side from the versioned menu; client prices are ignored; orders are written atomically with unique IDs.
+    frameworks: {nist_csf: [PR.DS-10], iso27001: [A.8.28], soc2: [PI1.2, PI1.3], sox_itgc: [ITGC-AppControls], gdpr: []}
+    implementation: [app/api/common/pricing.py, app/api/aws/handler.py, app/menu/menu.json]
+    automated_checks: [unit tests (pricing, tax, happy hour), menu integrity test]
+    evidence: [unit-tests.xml, menu.json change history]
+    vanta: {monitors: "Link unit test evidence to a processing-integrity custom test"}
+    frequency: every change
+
+  - id: FI-19
+    name: Secure web application
+    description: Strict CSP (no inline script), HSTS, frame-ancestors none, input validation and length limits, honeypot, API throttling, CORS pinned to the two site origins.
+    frameworks: {nist_csf: [PR.PS-06, PR.IR-01], iso27001: [A.8.26, A.8.28], soc2: [CC6.6, CC8.1], sox_itgc: [], gdpr: [Art.25, Art.32]}
+    implementation: [infra/aws/web.tf, infra/aws/api.tf, app/web/index.html, app/api/common/pricing.py]
+    automated_checks: [OPA CDN-002, OPA API-001, OPA FN-003, unit tests]
+    evidence: [policy-*.json, response headers from smoke tests]
+    vanta: {monitors: "Application security review evidence"}
+    frequency: every change
+
+  - id: FI-20
+    name: Cloud cost guardrails
+    description: Budgets with forecast and actual alerts in both clouds; consumption-only App Service plans; always-free DynamoDB capacity.
+    frameworks: {nist_csf: [GV.RM-06], iso27001: [A.5.23], soc2: [CC3.2], sox_itgc: [], gdpr: []}
+    implementation: [infra/aws/ops.tf, infra/azure/ops.tf, policies/azure/fi-consumption-plans-only.json]
+    automated_checks: [OPA COST-001, Azure Policy fi-consumption-plans-only]
+    evidence: [budget alert history]
+    vanta: {monitors: "Vendor / cloud service management"}
+    frequency: monthly

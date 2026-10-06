@@ -1,0 +1,48 @@
+{
+  "name": "fi-storage-no-public-blob",
+  "properties": {
+    "displayName": "Storage accounts must not allow public blob access",
+    "description": "Blocks anonymous container access. The static website endpoint still works because it does not use container ACLs.",
+    "mode": "Indexed",
+    "metadata": {
+      "category": "Frosty Irie",
+      "version": "1.0.0",
+      "controls": [
+        "NIST PR.AA-05",
+        "ISO A.8.3",
+        "SOC2 CC6.1"
+      ]
+    },
+    "parameters": {
+      "effect": {
+        "type": "String",
+        "defaultValue": "Deny",
+        "allowedValues": [
+          "Audit",
+          "Deny",
+          "Disabled"
+        ],
+        "metadata": {
+          "displayName": "Effect"
+        }
+      }
+    },
+    "policyRule": {
+      "if": {
+        "allOf": [
+          {
+            "field": "type",
+            "equals": "Microsoft.Storage/storageAccounts"
+          },
+          {
+            "field": "Microsoft.Storage/storageAccounts/allowBlobPublicAccess",
+            "equals": "true"
+          }
+        ]
+      },
+      "then": {
+        "effect": "[parameters('effect')]"
+      }
+    }
+  }
+}

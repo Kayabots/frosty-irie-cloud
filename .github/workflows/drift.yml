@@ -1,0 +1,76 @@
+name: Drift detection
+
+# Nightly plan against live infrastructure. Any difference from Git means a
+# change happened outside the pipeline: an issue is opened for triage
+# (NIST DE.CM-09, ISO A.8.9 configuration management, SOX change control).
+on:
+  schedule:
+    - cron: "23 11 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      issues: write
+    strategy:
+      fail-fast: false
+      matrix:
+        cloud: [aws, azure]
+    env:
+      ARM_USE_OIDC: "true"
+      ARM_CLIENT_ID: ${{ vars.AZURE_PLAN_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.5"
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v4
+        if: matrix.cloud == 'aws'
+        with:
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Detect drift
+        id: plan
+        run: |
+          if [ "${{ matrix.cloud }}" = aws ]; then
+            printf 'bucket="%s"\nkey="workload/aws/prod.tfstate"\nregion="us-east-1"\nencrypt=true\nuse_lockfile=true\n' "${{ vars.TF_STATE_BUCKET }}" > backend.hcl
+            VARS=(-var "owner_email=${{ vars.OWNER_EMAIL }}" -var "standby_web_host=${{ vars.STANDBY_WEB_HOST }}" -var "standby_web_origin=${{ vars.STANDBY_WEB_HOST && format('https://{0}', vars.STANDBY_WEB_HOST) || '' }}")
+          else
+            printf 'resource_group_name="rg-frostyirie-tfstate"\nstorage_account_name="%s"\ncontainer_name="tfstate"\nkey="workload/azure/prod.tfstate"\nuse_azuread_auth=true\nuse_oidc=true\n' "${{ vars.AZ_STATE_ACCOUNT }}" > backend.hcl
+            VARS=(-var "owner_email=${{ vars.OWNER_EMAIL }}" -var "primary_web_origin=${{ vars.PRIMARY_WEB_ORIGIN }}" -var "deployer_object_id=${{ vars.AZURE_DEPLOYER_OBJECT_ID }}")
+          fi
+          terraform -chdir=infra/${{ matrix.cloud }} init -input=false -backend-config="$PWD/backend.hcl"
+          set +e
+          terraform -chdir=infra/${{ matrix.cloud }} plan -input=false -lock=false -detailed-exitcode -no-color "${VARS[@]}" > plan.txt
+          code=$?
+          set -e
+          echo "exitcode=$code" >> "$GITHUB_OUTPUT"
+          [ $code -eq 1 ] && { cat plan.txt; exit 1; } || true
+          grep -E '^(Plan:|No changes)' plan.txt || true
+      - name: Open drift issue
+        if: steps.plan.outputs.exitcode == '2'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "Nightly plan found changes in **${{ matrix.cloud }}** that are not in Git."
+            echo
+            echo '```'
+            grep -E '^\s*[#~+-]|^Plan:' plan.txt | head -120
+            echo '```'
+            echo
+            echo "Triage: revert the out-of-band change, or codify it through a pull request."
+          } > body.md
+          gh label create drift --color B60205 --force >/dev/null
+          gh label create compliance --color 0E8A16 --force >/dev/null
+          gh issue create --title "Drift detected: ${{ matrix.cloud }} ($(date -u +%F))" \
+            --label drift --label compliance --body-file body.md

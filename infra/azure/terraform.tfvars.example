@@ -1,0 +1,9 @@
+environment        = "prod"
+location           = "eastus2"
+owner_email        = "owner@example.com"
+cosmos_free_tier   = true
+monthly_budget_usd = 5
+# From the AWS stack output website_url:
+primary_web_origin = ""
+# From infra/bootstrap/azure output github_sp_object_id:
+deployer_object_id = ""

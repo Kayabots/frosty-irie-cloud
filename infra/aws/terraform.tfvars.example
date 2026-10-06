@@ -1,0 +1,6 @@
+environment        = "prod"
+owner_email        = "owner@example.com"
+monthly_budget_usd = 5
+# Filled after the first Azure apply (terraform -chdir=infra/azure output):
+standby_web_host   = ""
+standby_web_origin = ""

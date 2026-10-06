@@ -1,0 +1,7 @@
+# Copy to backend.hcl (git-ignored) or let the pipeline pass these with -backend-config.
+resource_group_name  = "rg-frostyirie-tfstate"
+storage_account_name = "<from bootstrap output>"
+container_name       = "tfstate"
+key                  = "workload/azure/prod.tfstate"
+use_azuread_auth     = true
+use_oidc             = true

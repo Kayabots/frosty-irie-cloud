@@ -1,0 +1,60 @@
+{
+  "name": "fi-allowed-locations",
+  "properties": {
+    "displayName": "Allowed locations for Frosty Irie",
+    "description": "Keeps resources in documented regions (data residency record for the privacy notice).",
+    "mode": "Indexed",
+    "metadata": {
+      "category": "Frosty Irie",
+      "version": "1.0.0",
+      "controls": [
+        "GDPR Art.30",
+        "GDPR Art.44",
+        "ISO A.5.34"
+      ]
+    },
+    "parameters": {
+      "listOfAllowedLocations": {
+        "type": "Array",
+        "defaultValue": [
+          "eastus",
+          "eastus2",
+          "centralus"
+        ],
+        "metadata": {
+          "displayName": "Allowed locations",
+          "strongType": "location"
+        }
+      },
+      "effect": {
+        "type": "String",
+        "defaultValue": "Deny",
+        "allowedValues": [
+          "Audit",
+          "Deny",
+          "Disabled"
+        ],
+        "metadata": {
+          "displayName": "Effect"
+        }
+      }
+    },
+    "policyRule": {
+      "if": {
+        "allOf": [
+          {
+            "field": "location",
+            "notIn": "[parameters('listOfAllowedLocations')]"
+          },
+          {
+            "field": "location",
+            "notEquals": "global"
+          }
+        ]
+      },
+      "then": {
+        "effect": "[parameters('effect')]"
+      }
+    }
+  }
+}

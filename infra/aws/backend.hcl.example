@@ -1,0 +1,6 @@
+# Copy to backend.hcl (git-ignored) or let the pipeline pass these with -backend-config.
+bucket       = "frostyirie-tfstate-<ACCOUNT_ID>"
+key          = "workload/aws/prod.tfstate"
+region       = "us-east-1"
+encrypt      = true
+use_lockfile = true

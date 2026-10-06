@@ -1,0 +1,70 @@
+{
+  "version": "2026.09.1",
+  "currency": "CRC",
+  "status": "DRAFT - consolidated from the two website drafts; confirm every price against the printed Frosty Irie menu before go-live",
+  "store": {
+    "name": "Frosty Irie",
+    "tagline": "Cool Drinks & Irie People",
+    "location": "Beachfront, Puerto Viejo de Talamanca, Limón, Costa Rica",
+    "whatsapp": "50689185528",
+    "email": "hola@frostyirie.cr",
+    "timezone": "America/Costa_Rica",
+    "hours": { "open": "11:00", "close": "22:00" }
+  },
+  "pricing": {
+    "ivaRate": 0.13,
+    "serviceRate": 0.10,
+    "serviceAppliesTo": ["beach"],
+    "deliveryFee": 1500,
+    "happyHour": { "start": "16:00", "end": "18:00", "category": "cocktails", "price": 5000 }
+  },
+  "orderTypes": [
+    { "id": "delivery", "label": "Home delivery", "emoji": "🛵" },
+    { "id": "pickup", "label": "Pickup", "emoji": "🏪" },
+    { "id": "beach", "label": "Beach table", "emoji": "🏖️" }
+  ],
+  "sizes": {
+    "personal": { "label": "Personal", "detail": "6\" · 1–2 people" },
+    "medium": { "label": "Medium", "detail": "10\" · 4 slices" },
+    "large": { "label": "Large", "detail": "14\" · 8 slices" },
+    "slice": { "label": "Slice", "detail": "Grab & go" },
+    "single": { "label": "Regular", "detail": "" }
+  },
+  "categories": [
+    { "id": "pizza", "label": "Pizza", "emoji": "🍕", "blurb": "Hand-stretched, stone-baked. Whole pies or by the slice." },
+    { "id": "cocktails", "label": "Tropical Cocktails", "emoji": "🍹", "blurb": "Happy hour 4–6 PM: every cocktail ₡5,000." },
+    { "id": "beer", "label": "Cold Beer", "emoji": "🍺", "blurb": "Ice cold, straight from the cooler." },
+    { "id": "eats", "label": "Caribbean Eats", "emoji": "🌮", "blurb": "Spice, smoke and island soul." },
+    { "id": "combos", "label": "Combos", "emoji": "🤙", "blurb": "Made for sharing with your crew." }
+  ],
+  "items": [
+    { "id": "pz-cheese", "category": "pizza", "name": "Classic Cheese", "emoji": "🧀", "desc": "Mozzarella, slow-cooked tomato sauce, fresh basil.", "badge": "Best seller",
+      "prices": { "personal": 3500, "medium": 5800, "large": 8500, "slice": 1500 } },
+    { "id": "pz-pepperoni", "category": "pizza", "name": "Pepperoni", "emoji": "🍕", "desc": "Generous pepperoni, mozzarella, spicy tomato sauce.",
+      "prices": { "personal": 4000, "medium": 6500, "large": 9500, "slice": 1800 } },
+    { "id": "pz-supreme", "category": "pizza", "name": "Supreme", "emoji": "🌟", "desc": "Pepperoni, sausage, bell pepper, red onion, mushroom.", "badge": "Loaded",
+      "prices": { "personal": 4800, "medium": 7500, "large": 10800, "slice": 2200 } },
+    { "id": "pz-ham", "category": "pizza", "name": "Ham & Cheese", "emoji": "🥓", "desc": "Thick-cut ham, double mozzarella, creamy white base.",
+      "prices": { "personal": 3800, "medium": 6200, "large": 9000, "slice": 1700 } },
+    { "id": "pz-shrimp", "category": "pizza", "name": "Caribbean Shrimp", "emoji": "🦐", "desc": "Local shrimp, garlic butter, cherry tomato, cilantro, lime.", "badge": "Signature",
+      "prices": { "personal": 5200, "medium": 8500, "large": 12500, "slice": 2500 } },
+
+    { "id": "ck-sunset", "category": "cocktails", "name": "Sunset Serenity", "emoji": "🌅", "desc": "Spiced rum, guava, lime.", "prices": { "single": 6500 } },
+    { "id": "ck-ginger", "category": "cocktails", "name": "Ginger Paradise", "emoji": "🥥", "desc": "Ginger beer, dark rum, pineapple.", "prices": { "single": 6000 } },
+    { "id": "ck-volcano", "category": "cocktails", "name": "Volcano Sunrise", "emoji": "🌋", "desc": "Tequila, strawberry, orange.", "prices": { "single": 7500 } },
+    { "id": "ck-emerald", "category": "cocktails", "name": "Emerald Lagoon", "emoji": "💎", "desc": "White rum, blue curaçao, coconut.", "prices": { "single": 6500 } },
+
+    { "id": "br-imperial", "category": "beer", "name": "Imperial", "emoji": "🍺", "desc": "The Costa Rican classic.", "prices": { "single": 2500 } },
+    { "id": "br-pilsen", "category": "beer", "name": "Pilsen", "emoji": "🍺", "desc": "Crisp local pilsner.", "prices": { "single": 2500 } },
+    { "id": "br-bavaria", "category": "beer", "name": "Bavaria", "emoji": "🍺", "desc": "Smooth premium lager.", "prices": { "single": 2500 } },
+
+    { "id": "ea-jerk-tacos", "category": "eats", "name": "Jerk Chicken Tacos (2)", "emoji": "🌮", "desc": "Spicy and authentic.", "prices": { "single": 6500 } },
+    { "id": "ea-oxtail", "category": "eats", "name": "Oxtail Bowl", "emoji": "🍲", "desc": "Rice and beans, sweet plantains.", "prices": { "single": 8500 } },
+    { "id": "ea-brisket", "category": "eats", "name": "Brisket Burrito", "emoji": "🌯", "desc": "Slow-cooked brisket, wrapped tight.", "prices": { "single": 7500 } },
+    { "id": "ea-wings", "category": "eats", "name": "Spicy Wings & Fries", "emoji": "🍗", "desc": "Caribbean heat.", "prices": { "single": 6000 } },
+
+    { "id": "cb-beach", "category": "combos", "name": "Beach Vibes Combo", "emoji": "🍹", "desc": "2 cocktails + wings & fries.", "prices": { "single": 15500 } },
+    { "id": "cb-taco", "category": "combos", "name": "Taco Tuesday Deal", "emoji": "🌮", "desc": "4 jerk tacos + 4 beers.", "prices": { "single": 18000 } },
+    { "id": "cb-quick", "category": "combos", "name": "Quick Bite", "emoji": "🍕", "desc": "2 pizza slices + a beer.", "prices": { "single": 6000 } }
+  ]
+}

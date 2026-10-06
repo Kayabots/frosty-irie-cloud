@@ -1,0 +1,186 @@
+name: CI · test, scan, plan, policy-check
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TF_VERSION: "1.10.5"
+  CONFTEST_VERSION: "0.56.0"
+  TF_IN_AUTOMATION: "true"
+
+jobs:
+  app:
+    name: App tests + lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - name: Ruff
+        run: ruff check app scripts tests
+      - name: Unit tests (pricing, handler, menu integrity)
+        run: pytest -q --junitxml=evidence/unit-tests.xml
+      - name: Menu JSON is valid and every price is a positive integer
+        run: python -c "import json;m=json.load(open('app/menu/menu.json'));assert all(isinstance(p,int) and p>0 for i in m['items'] for p in i['prices'].values())"
+      - name: Control matrix matches controls.yaml and every referenced file exists
+        run: python scripts/gen_control_matrix.py --check
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: evidence-unit-tests
+          path: evidence/
+          retention-days: 90
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  iac-static:
+    name: IaC static analysis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # upload SARIF to code scanning
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+      - name: terraform fmt
+        run: terraform fmt -check -recursive infra
+      - name: terraform validate (no backend)
+        run: |
+          for d in infra/aws infra/azure infra/bootstrap/aws infra/bootstrap/azure; do
+            terraform -chdir=$d init -backend=false -input=false >/dev/null
+            terraform -chdir=$d validate
+          done
+      - uses: terraform-linters/setup-tflint@v4
+      - name: tflint
+        env:
+          GITHUB_TOKEN: ${{ github.token }} # avoids anonymous API rate limits when fetching rule plugins
+        run: |
+          tflint --init --config "$GITHUB_WORKSPACE/.tflint.hcl"
+          for d in infra/aws infra/azure; do tflint --chdir=$d --config "$GITHUB_WORKSPACE/.tflint.hcl"; done
+      - name: Checkov (CIS / NIST mappings, suppressions documented in .checkov.yaml)
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: infra
+          config_file: .checkov.yaml
+          output_format: cli,sarif
+          output_file_path: console,checkov.sarif
+      # Code scanning needs a public repository or GitHub Advanced Security.
+      # On a private repository without it this step is skipped over, not fatal.
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        continue-on-error: true
+        with:
+          sarif_file: checkov.sarif
+          category: checkov
+
+  policy-tests:
+    name: Policy-as-code unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: open-policy-agent/setup-opa@v2
+        with:
+          version: 1.4.2
+      - run: opa fmt --list --fail policies/opa
+      - run: opa test policies/opa -v
+      - name: Azure Policy definitions are well-formed
+        run: |
+          for f in policies/azure/*.json; do
+            jq -e '.properties.policyRule.if and .properties.policyRule.then and .properties.mode' "$f" >/dev/null || { echo "bad: $f"; exit 1; }
+          done
+
+  plan:
+    name: Plan + Conftest (${{ matrix.cloud }})
+    needs: [app, iac-static, policy-tests]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # OIDC to AWS / Azure, no stored cloud keys
+      pull-requests: write
+    strategy:
+      fail-fast: false
+      matrix:
+        cloud: [aws, azure]
+    env:
+      ARM_USE_OIDC: "true"
+      ARM_CLIENT_ID: ${{ vars.AZURE_PLAN_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - name: Install Conftest
+        run: |
+          curl -sSL "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz" | tar xz conftest
+          sudo mv conftest /usr/local/bin/
+      - name: AWS credentials (plan role)
+        if: matrix.cloud == 'aws'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Backend config
+        run: |
+          if [ "${{ matrix.cloud }}" = aws ]; then
+            printf 'bucket="%s"\nkey="workload/aws/prod.tfstate"\nregion="us-east-1"\nencrypt=true\nuse_lockfile=true\n' "${{ vars.TF_STATE_BUCKET }}" > backend.hcl
+          else
+            printf 'resource_group_name="rg-frostyirie-tfstate"\nstorage_account_name="%s"\ncontainer_name="tfstate"\nkey="workload/azure/prod.tfstate"\nuse_azuread_auth=true\nuse_oidc=true\n' "${{ vars.AZ_STATE_ACCOUNT }}" > backend.hcl
+          fi
+      - name: Plan and evaluate policies
+        run: |
+          if [ "${{ matrix.cloud }}" = aws ]; then
+            scripts/plan_and_check.sh aws "$PWD/backend.hcl" \
+              -var "owner_email=${{ vars.OWNER_EMAIL }}" \
+              -var "standby_web_host=${{ vars.STANDBY_WEB_HOST }}" \
+              -var "standby_web_origin=${{ vars.STANDBY_WEB_HOST && format('https://{0}', vars.STANDBY_WEB_HOST) || '' }}"
+          else
+            scripts/plan_and_check.sh azure "$PWD/backend.hcl" \
+              -var "owner_email=${{ vars.OWNER_EMAIL }}" \
+              -var "primary_web_origin=${{ vars.PRIMARY_WEB_ORIGIN }}" \
+              -var "deployer_object_id=${{ vars.AZURE_DEPLOYER_OBJECT_ID }}"
+          fi
+      - name: Plan summary
+        if: always()
+        run: |
+          {
+            echo "### ${{ matrix.cloud }} plan"
+            terraform -chdir=infra/${{ matrix.cloud }} show -no-color tfplan | grep -E '^Plan:|No changes' || true
+            echo '```'
+            cat evidence/policy-${{ matrix.cloud }}.txt 2>/dev/null || echo "policy check did not run"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: evidence-plan-${{ matrix.cloud }}
+          path: evidence/
+          retention-days: 90

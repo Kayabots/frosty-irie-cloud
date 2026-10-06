@@ -1,0 +1,7 @@
+# Every change needs an owner's review (branch protection: "Require review from Code Owners").
+*                        @YOUR-GITHUB-USERNAME
+/infra/                  @YOUR-GITHUB-USERNAME
+/policies/               @YOUR-GITHUB-USERNAME
+/compliance/             @YOUR-GITHUB-USERNAME
+/.github/workflows/      @YOUR-GITHUB-USERNAME
+/app/menu/menu.json      @YOUR-GITHUB-USERNAME
