@@ -47,7 +47,7 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: us-east-1
-      - uses: azure/login@v2
+      - uses: azure/login@v3
         if: env.ACTION != 'restore-drill'
         with:
           client-id: ${{ vars.AZURE_DEPLOY_CLIENT_ID }}
