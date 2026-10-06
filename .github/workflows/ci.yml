@@ -92,7 +92,7 @@ jobs:
           output_file_path: console,checkov.sarif
       # Code scanning needs a public repository or GitHub Advanced Security.
       # On a private repository without it this step is skipped over, not fatal.
-      - uses: github/codeql-action/upload-sarif@v3
+      - uses: github/codeql-action/upload-sarif@v4
         if: always()
         continue-on-error: true
         with:
