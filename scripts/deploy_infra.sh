@@ -27,7 +27,7 @@ plan_apply() {
   tf "$dir" plan -input=false -out=tfplan "$@"
   local plan_json; plan_json="$(mktemp)"
   tf "$dir" show -json tfplan > "$plan_json"
-  if ! conftest test "$plan_json" --policy policies/opa --namespace "terraform.$cloud" --no-color \
+  if ! conftest test "$plan_json" --parser json --policy policies/opa --namespace "terraform.$cloud" --no-color \
        | tee -a "evidence/deploy-policy-$cloud.txt"; then
     rm -f "$plan_json"; echo "Policy gate failed for $cloud; nothing applied." >&2; exit 1
   fi

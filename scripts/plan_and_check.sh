@@ -23,8 +23,8 @@ jq '{format_version, terraform_version, timestamp,
    "$PLAN_JSON" > "$EVID/plan-$CLOUD-changes.json"
 
 STATUS=0
-conftest test "$PLAN_JSON" --policy policies/opa --namespace "terraform.$CLOUD" \
+conftest test "$PLAN_JSON" --parser json --policy policies/opa --namespace "terraform.$CLOUD" \
   --output json > "$EVID/policy-$CLOUD.json" || STATUS=$?
-conftest test "$PLAN_JSON" --policy policies/opa --namespace "terraform.$CLOUD" --no-color \
+conftest test "$PLAN_JSON" --parser json --policy policies/opa --namespace "terraform.$CLOUD" --no-color \
   | tee "$EVID/policy-$CLOUD.txt" || true
 exit "$STATUS"
