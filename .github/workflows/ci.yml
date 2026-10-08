@@ -24,8 +24,8 @@ jobs:
     name: App tests + lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -39,7 +39,7 @@ jobs:
         run: python -c "import json;m=json.load(open('app/menu/menu.json'));assert all(isinstance(p,int) and p>0 for i in m['items'] for p in i['prices'].values())"
       - name: Control matrix matches controls.yaml and every referenced file exists
         run: python scripts/gen_control_matrix.py --check
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: evidence-unit-tests
@@ -50,10 +50,10 @@ jobs:
     name: Secret scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -64,8 +64,8 @@ jobs:
       contents: read
       security-events: write # upload SARIF to code scanning
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: ${{ env.TF_VERSION }}
       - name: terraform fmt
@@ -76,7 +76,7 @@ jobs:
             terraform -chdir=$d init -backend=false -input=false >/dev/null
             terraform -chdir=$d validate
           done
-      - uses: terraform-linters/setup-tflint@v4
+      - uses: terraform-linters/setup-tflint@v6
       - name: tflint
         env:
           GITHUB_TOKEN: ${{ github.token }} # avoids anonymous API rate limits when fetching rule plugins
@@ -103,7 +103,7 @@ jobs:
     name: Policy-as-code unit tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: open-policy-agent/setup-opa@v2
         with:
           version: 1.4.2
@@ -152,8 +152,8 @@ jobs:
             echo "::error title=Missing repository variables::$missing- add them under Settings > Secrets and variables > Actions > Variables (repository level, not environment or secrets)"
             exit 1
           fi
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: ${{ env.TF_VERSION }}
           terraform_wrapper: false
@@ -163,7 +163,7 @@ jobs:
           sudo mv conftest /usr/local/bin/
       - name: AWS credentials (plan role)
         if: matrix.cloud == 'aws'
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
           aws-region: us-east-1
@@ -197,7 +197,7 @@ jobs:
             cat evidence/policy-${{ matrix.cloud }}.txt 2>/dev/null || echo "policy check did not run"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: evidence-plan-${{ matrix.cloud }}

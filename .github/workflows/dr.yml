@@ -38,16 +38,16 @@ jobs:
       COSMOS_DATABASE: frostyirie
       ACTION: ${{ inputs.action || (github.event.schedule == '41 14 3 * *' && 'restore-drill') || 'aws-to-azure' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: pip install -r scripts/requirements.txt
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: us-east-1
-      - uses: azure/login@v2
+      - uses: azure/login@v3
         if: env.ACTION != 'restore-drill'
         with:
           client-id: ${{ vars.AZURE_DEPLOY_CLIENT_ID }}
@@ -59,7 +59,7 @@ jobs:
       - name: Restore drill (AWS PITR)
         if: env.ACTION == 'restore-drill'
         run: python scripts/restore_drill_aws.py
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: evidence-dr-${{ env.ACTION }}-${{ github.run_id }}
