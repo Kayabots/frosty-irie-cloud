@@ -13,6 +13,8 @@ permissions:
 
 jobs:
   drift:
+    # Nothing to compare until the first deployment; PRIMARY_WEB_ORIGIN is set right after it.
+    if: vars.PRIMARY_WEB_ORIGIN != ''
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -28,6 +30,22 @@ jobs:
       ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
     steps:
+      - name: Check repository variables are set
+        env:
+          V_OWNER_EMAIL: ${{ vars.OWNER_EMAIL }}
+          V_TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+          V_AWS_PLAN_ROLE_ARN: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          V_AZ_STATE_ACCOUNT: ${{ vars.AZ_STATE_ACCOUNT }}
+          V_AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          V_AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          V_AZURE_PLAN_CLIENT_ID: ${{ vars.AZURE_PLAN_CLIENT_ID }}
+          V_AZURE_DEPLOYER_OBJECT_ID: ${{ vars.AZURE_DEPLOYER_OBJECT_ID }}
+        run: |
+          missing=$(env | grep '^V_' | awk -F= '$2=="" {sub(/^V_/,"",$1); print $1}' | sort | tr '\n' ' ')
+          if [ -n "$missing" ]; then
+            echo "::error title=Missing repository variables::$missing- add them under Settings > Secrets and variables > Actions > Variables (repository level, not environment or secrets)"
+            exit 1
+          fi
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
         with:

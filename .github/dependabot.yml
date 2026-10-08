@@ -1,22 +1,37 @@
 version: 2
+# Grouped updates: one pull request per ecosystem per week instead of one per package.
+# Major versions of Terraform providers and Python packages are ignored here and
+# handled deliberately (they change resource schemas and APIs; see azurerm 5.x).
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]
     labels: [dependencies, security]
+
   - package-ecosystem: pip
-    directory: /app/api/azure
+    directories: [/app/api/azure, /scripts]
     schedule:
       interval: weekly
+    groups:
+      python:
+        patterns: ["*"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     labels: [dependencies, security]
-  - package-ecosystem: pip
-    directory: /scripts
-    schedule:
-      interval: weekly
-    labels: [dependencies, security]
+
   - package-ecosystem: terraform
     directories: [/infra/aws, /infra/azure, /infra/bootstrap/aws, /infra/bootstrap/azure]
     schedule:
       interval: weekly
+    groups:
+      terraform-providers:
+        patterns: ["*"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     labels: [dependencies, iac]
