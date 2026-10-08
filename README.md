@@ -329,6 +329,8 @@ terraform apply -var owner_email=you@example.com -var github_repository=OWNER/fr
 # Optional: -var enable_aws_config=true
 ```
 
+> **GitHub OIDC subject format.** Repositories created or renamed on github.com after 15 July 2026 send an OIDC `sub` claim with immutable IDs, for example `repo:OWNER@12345/frosty-irie-cloud@67890:ref:refs/heads/main`. For those, also pass `-var github_oidc_subject=OWNER@12345/frosty-irie-cloud@67890` to **both** bootstrap stacks. The IDs are in the first `AADSTS700213` error, or from `gh api repos/OWNER/frosty-irie-cloud --jq '"\(.owner.id) \(.id)"'`. The trust then pins to IDs that a re-created repository with the same name cannot reuse.
+
 Outputs: `state_bucket`, `gh_plan_role_arn`, `gh_deploy_role_arn`, `vanta_role_arn`.
 
 ### 2. Bootstrap Azure (once)

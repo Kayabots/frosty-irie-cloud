@@ -26,7 +26,7 @@ resource "azuread_application_federated_identity_credential" "plan_pr" {
   display_name   = "pull-requests"
   issuer         = local.gh_issuer
   audiences      = local.gh_aud
-  subject        = "repo:${var.github_repository}:pull_request"
+  subject        = "repo:${local.gh_sub_repo}:pull_request"
 }
 
 resource "azuread_application_federated_identity_credential" "plan_main" {
@@ -35,7 +35,7 @@ resource "azuread_application_federated_identity_credential" "plan_main" {
   display_name   = "main-branch"
   issuer         = local.gh_issuer
   audiences      = local.gh_aud
-  subject        = "repo:${var.github_repository}:ref:refs/heads/main"
+  subject        = "repo:${local.gh_sub_repo}:ref:refs/heads/main"
 }
 
 resource "azurerm_role_assignment" "plan_reader" {
@@ -73,7 +73,7 @@ resource "azuread_application_federated_identity_credential" "deploy_env" {
   display_name   = "prod-environment"
   issuer         = local.gh_issuer
   audiences      = local.gh_aud
-  subject        = "repo:${var.github_repository}:environment:prod"
+  subject        = "repo:${local.gh_sub_repo}:environment:prod"
 }
 
 resource "azurerm_role_assignment" "deploy_contributor" {
