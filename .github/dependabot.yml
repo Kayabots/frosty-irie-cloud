@@ -31,7 +31,18 @@ updates:
     groups:
       terraform-providers:
         patterns: ["*"]
+    # Dependabot's "semver-major" filter does not stop it from rewriting "~>"
+    # version constraints, so the provider majors are pinned out explicitly.
+    # Upgrade them in a planned change: azurerm 5 renames Cosmos DB arguments.
     ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
+      - dependency-name: "hashicorp/azurerm"
+        versions: [">= 5.0.0"]
+      - dependency-name: "hashicorp/aws"
+        versions: [">= 6.0.0"]
+      - dependency-name: "hashicorp/azuread"
+        versions: [">= 4.0.0"]
+      - dependency-name: "hashicorp/archive"
+        versions: [">= 3.0.0"]
+      - dependency-name: "hashicorp/random"
+        versions: [">= 4.0.0"]
     labels: [dependencies, iac]
